@@ -7,11 +7,15 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.recyclerview.widget.ItemTouchHelper;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
@@ -19,9 +23,11 @@ import java.util.ArrayList;
 import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
-    private LinearLayout linearLayotNotes;
+    private RecyclerView recycleViewNotes;
     private FloatingActionButton buttonAddNote;
-    private ArrayList<Note> notes = new ArrayList<>();
+    private NotesAdapter notesAdapter;
+
+    private NoteDatabase noteDatabase;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,16 +40,41 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
+        noteDatabase = NoteDatabase.getInstance(getApplication());
         initView();
 
-        Random random = new Random();
+        notesAdapter = new NotesAdapter();
+        notesAdapter.setOnNoteClickListener(new NotesAdapter.onNoteClickListener() {
+            @Override
+            public void onNoteClick(Note note) {
+            }
+        });
+        recycleViewNotes.setAdapter(notesAdapter);
 
-        for (int i = 0; i < 20; i++) {
-            Note note = new Note(i, "Note " + i, random.nextInt(3));
-            notes.add(note);
-        }
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+            @Override
+            public boolean onMove(
+                    @NonNull RecyclerView recyclerView,
+                    @NonNull RecyclerView.ViewHolder viewHolder,
+                    @NonNull RecyclerView.ViewHolder target
+            ) {
+                return false;
+            }
 
-        showNotes();
+            @Override
+            public void onSwiped(
+                    @NonNull RecyclerView.ViewHolder viewHolder,
+                    int direction
+            ) {
+                int position = viewHolder.getBindingAdapterPosition();
+                Note note = notesAdapter.getNotes().get(position);
+                noteDatabase.notesDao().remove(note.getId());
+                showNotes();
+            }
+        });
+
+        itemTouchHelper.attachToRecyclerView(recycleViewNotes);
+
         buttonAddNote.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -53,36 +84,18 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        showNotes();
+    }
+
     private void showNotes() {
-        for (Note note : notes) {
-            View view = getLayoutInflater().inflate(
-                    R.layout.note_item,
-                    linearLayotNotes,
-                    false);
-            TextView textViewNote = view.findViewById(R.id.textViewNote);
-            textViewNote.setText(note.getText());
-
-            int colorResId;
-            switch (note.getPriority()) {
-                case 0:
-                    colorResId = android.R.color.holo_green_light;
-                    break;
-                case 1:
-                    colorResId = android.R.color.holo_orange_light;
-                    break;
-                default:
-                    colorResId = android.R.color.holo_red_light;
-                    break;
-            }
-
-            int color = ContextCompat.getColor(this, colorResId);
-            textViewNote.setBackgroundColor(color);
-            linearLayotNotes.addView(view);
-        }
+        notesAdapter.setNotes(noteDatabase.notesDao().getNotes());
     }
 
     public void initView() {
-        linearLayotNotes = findViewById(R.id.linearLayotNotes);
+        recycleViewNotes = findViewById(R.id.recycleViewNotes);
         buttonAddNote = findViewById(R.id.buttonAddNote);
     }
 }

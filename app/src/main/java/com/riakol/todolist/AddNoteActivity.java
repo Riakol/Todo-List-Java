@@ -20,6 +20,8 @@ public class AddNoteActivity extends AppCompatActivity {
     private RadioButton radioButtonMedium;
     private Button buttonSave;
 
+    private NoteDatabase noteDatabase;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -31,6 +33,7 @@ public class AddNoteActivity extends AppCompatActivity {
             return insets;
         });
 
+        noteDatabase = NoteDatabase.getInstance(getApplication());
         initView();
 
         buttonSave.setOnClickListener(new View.OnClickListener() {
@@ -45,6 +48,10 @@ public class AddNoteActivity extends AppCompatActivity {
     private void saveNote() {
         String text = editTextNote.getText().toString().trim();
         int priority = getPriority();
+        Note note = new Note(text, priority);
+        noteDatabase.notesDao().add(note);
+
+        finish();
     }
 
     private int getPriority() {
