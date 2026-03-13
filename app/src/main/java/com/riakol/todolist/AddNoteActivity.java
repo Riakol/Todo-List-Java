@@ -3,6 +3,8 @@ package com.riakol.todolist;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -13,6 +15,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 
 public class AddNoteActivity extends AppCompatActivity {
     private EditText editTextNote;
@@ -20,7 +24,7 @@ public class AddNoteActivity extends AppCompatActivity {
     private RadioButton radioButtonMedium;
     private Button buttonSave;
 
-    private NoteDatabase noteDatabase;
+    private AddNoteViewModel viewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,7 +37,15 @@ public class AddNoteActivity extends AppCompatActivity {
             return insets;
         });
 
-        noteDatabase = NoteDatabase.getInstance(getApplication());
+        viewModel = new ViewModelProvider(this).get(AddNoteViewModel.class);
+        viewModel.getShouldCloseScreen().observe(this, new Observer<Boolean>() {
+            @Override
+            public void onChanged(Boolean shouldCloseScreen) {
+                if (shouldCloseScreen) {
+                    finish();
+                }
+            }
+        });
         initView();
 
         buttonSave.setOnClickListener(new View.OnClickListener() {
@@ -49,9 +61,7 @@ public class AddNoteActivity extends AppCompatActivity {
         String text = editTextNote.getText().toString().trim();
         int priority = getPriority();
         Note note = new Note(text, priority);
-        noteDatabase.notesDao().add(note);
-
-        finish();
+        viewModel.saveNote(note);
     }
 
     private int getPriority() {
